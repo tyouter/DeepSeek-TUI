@@ -1,6 +1,6 @@
-# Development Pipeline v1.2
+# Development Pipeline v1.3
 
-> 版本: 1.2 | 最后更新: 2026-05-11 | 维护: AI Agent + tyouter
+> 版本: 1.3 | 最后更新: 2026-05-11 | 维护: AI Agent + tyouter
 >
 > 本文档定义了从需求发现到 PR 合入上游的**强制性**开发流程。
 > 任何偏离必须有明确理由并记录在 RETRO.md 中。
@@ -25,10 +25,10 @@ Phase 0: 会话启动（每次对话开始，AI 强制执行）
 Phase 1: 需求评审（每个新需求走此流程）
    │
    ▼
-Phase 2: 开发（每个需求的规范实现）
+Phase 2: 开发（在 ray-song-feature 上，pipeline 工具全可用）
    │
    ▼
-Phase 3: 交付 PR（生成制品 → rebase → 提交 → 监控）
+Phase 3: 交付 PR（提取干净分支 → rebase → 提交 → 监控）
    │
    ▼
 Phase M: Pipeline 改进（持续的元工作）
@@ -120,28 +120,35 @@ AI 出具**评审报告**，必须覆盖：
 **触发**: 用户选择 POOL 中状态为 `🟡 已评审/就绪` 的需求
 **执行者**: AI Agent（开发）+ 用户（审查）
 
-### 2.1 分支创建
+### 2.1 在 ray-song-feature 上开发
 
-**关键：feature 分支必须从 `upstream/main` 创建，不经过 `ray-song-feature`。**
-`ray-song-feature` 包含本地 pipeline 文件（`requirements/`、`scripts/`、`.githooks/`），
-这些文件**绝不**进入 PR。从 upstream/main 直接切分支保证 PR 干净。
+**所有开发在 `ray-song-feature` 上进行。这是唯一拥有 pipeline 工具的分支。**
+
+无需创建 feature 分支——Phase 2 的全部工作（编码、检查、提交）都在
+`ray-song-feature` 上完成。pipeline 工具（`scripts/check.py`、`.githooks/`、
+`requirements/`）在此分支上始终可用。
 
 ```bash
-# 1. 确保上游最新
+# 确保在最新上游基础上
+git checkout ray-song-feature
 git fetch upstream
+git rebase upstream/main
 
-# 2. 直接从 upstream/main 创建 feature 分支（干净基线）
-git checkout -b feat/<REQ-ID>-<short-slug> upstream/main
-
-# 示例
-git checkout -b feat/REQ-20260510-001-fix-scroll upstream/main
+# 现在开始开发——所有 commit 直接落在 ray-song-feature 上
 ```
 
 分支关系：
 ```
-upstream/main  ←── feat/<REQ-ID>-<slug> (PR 分支，只含此需求的改动)
+upstream/main
      │
-     └── ray-song-feature (本地开发分支，含 pipeline 文件，永不 PR)
+     └── ray-song-feature  ← Phase 2 开发在此
+              │                 (pipeline 工具可用)
+              ├── commit 1
+              ├── commit 2
+              └── commit 3  ← 功能完成
+                                │
+                                ▼
+                           Phase 3: 提取到干净 PR 分支
 ```
 
 ### 2.2 规格文档（M/L 级别需求）
@@ -275,7 +282,7 @@ AI 必须逐条回答以下问题，不得跳过：
 - **简短描述** (#PR编号，待填) — 详细说明。Thanks **@tyouter**.
 ```
 
-### 2.6 Commit & 后续
+### 2.6 Commit
 
 ```bash
 # Atomic commits with conventional format
@@ -287,20 +294,19 @@ git commit -m "feat(<scope>): 简短描述
 Refs: REQ-YYYYMMDD-NNN
 Developed with AI assistance."
 
-# 注意：不要合并回 ray-song-feature！
-# feature 分支直接从 upstream/main 创建，保持干净。
-# PR 合入上游后，ray-song-feature 可以通过 rebase upstream/main 获取最新代码。
+# commit 直接落在 ray-song-feature 上
+# Phase 3 时再提取到干净的 PR 分支
 ```
 
 ### Exit Criteria (Phase 2)
 
-- [ ] 所有代码已 incremental commit
+- [ ] 所有代码已 incremental commit（在 `ray-song-feature` 上）
 - [ ] Layer 1 自动化扫描全部通过
 - [ ] Layer 2 模式检查清单全部完成（10 项）
 - [ ] Layer 3 架构安全审查完成
 - [ ] Layer 4 用户审查完成（已批准）
 - [ ] Changelog 片段已写
-- [ ] 代码在 feature 分支上，基于 upstream/main
+- [ ] 已记录本需求的 commit hash 列表（用于 Phase 3 提取）
 
 ---
 
@@ -308,6 +314,39 @@ Developed with AI assistance."
 
 **触发**: Phase 2 所有 exit criteria 满足
 **执行者**: AI Agent（生成制品）+ 用户（最终确认）
+
+### 3.0 提取干净 PR 分支
+
+**这是解决 pipeline 文件污染的关"键步骤。**
+
+在 `ray-song-feature` 上开发完后，本需求的代码 commit 和 pipeline 的 commit 混在一起。
+必须提取纯代码 commit 到干净分支用于 PR。
+
+```bash
+# 1. 确认当前在 ray-song-feature，已记录本需求的 commit hash 列表
+git checkout ray-song-feature
+
+# 2. 从上游最新 commit 创建干净分支
+git checkout -b feat/<REQ-ID>-<slug> upstream/main
+
+# 3. cherry-pick 本需求的所有代码 commit（按顺序）
+git cherry-pick <commit-hash-1>
+git cherry-pick <commit-hash-2>
+git cherry-pick <commit-hash-3>
+
+# 4. 验证干净分支不包含 pipeline 文件
+git diff upstream/main --stat
+# 应该只有 crates/ 等源码目录的改动，没有 requirements/ scripts/ .githooks/
+```
+
+**检查干净分支：**
+```bash
+# 确认没有 pipeline 文件泄露
+git diff upstream/main --name-only | grep -E "^(requirements/|scripts/|\.githooks/)" && echo "❌ 泄露!" || echo "✅ 干净"
+```
+
+如果检查到 pipeline 文件泄露：说明 cherry-pick 时不小心带入了 pipeline commit。
+重新创建干净分支，只 cherry-pick 代码 commit。
 
 ### 3.1 打 Checkpoint Tag
 

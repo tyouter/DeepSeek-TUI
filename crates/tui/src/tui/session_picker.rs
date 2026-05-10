@@ -503,38 +503,38 @@ fn build_preview_lines(session: &SavedSession) -> Vec<String> {
     }
     out.push("".to_string());
 
-    // Collect user + assistant messages with visible text content
+    // Collect user + assistant messages, showing only final visible dialogue.
+    // ─ USER: strip any <turn_meta> system prefixes, show clean prompt
+    // ─ ASSISTANT: skip Thinking blocks, show only the Text (final answer)
+    // ─ Skip messages with no visible text after cleaning.
     let mut dialogue_lines: Vec<String> = Vec::new();
     for message in &session.messages {
         let role = message.role.to_ascii_uppercase();
         let mut text = String::new();
-        let mut has_text = false;
         for block in &message.content {
             match block {
                 crate::models::ContentBlock::Text { text: body, .. } => {
-                    // Strip turn_meta prefix for the first user message
-                    let cleaned = if dialogue_lines.is_empty() && role == "USER" {
+                    // Strip system-invisible prefixes from all user messages
+                    let cleaned = if role == "USER" {
                         crate::session_manager::extract_user_prompt(body).to_string()
                     } else {
                         body.clone()
                     };
                     if !cleaned.trim().is_empty() {
+                        if !text.is_empty() {
+                            text.push(' ');
+                        }
                         text.push_str(&cleaned);
-                        has_text = true;
                     }
                 }
-                crate::models::ContentBlock::Thinking { .. } => {
-                    // Indicate thinking without including the full reasoning tokens
-                    if !has_text {
-                        text.push_str("[thinking]");
-                        has_text = true;
-                    }
-                }
+                // Thinking blocks are internal reasoning — skip entirely
+                crate::models::ContentBlock::Thinking { .. } => {}
                 _ => {}
             }
         }
-        if has_text && !text.trim().is_empty() {
-            let preview = truncate(&text.replace('\n', " "), 120);
+        let trimmed = text.trim().to_string();
+        if !trimmed.is_empty() {
+            let preview = truncate(&trimmed.replace('\n', " "), 120);
             dialogue_lines.push(format!("{role}: {preview}"));
         }
     }

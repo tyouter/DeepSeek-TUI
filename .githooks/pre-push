@@ -1,0 +1,13 @@
+@echo off
+REM pre-push hook — run full gate suite before pushing
+REM Installed via: git config core.hooksPath .githooks
+echo ============================================
+echo   Running full gate suite before push...
+echo ============================================
+python scripts/check.py full
+if errorlevel 1 (
+    echo.
+    echo   Push blocked. Fix errors or use "git push --no-verify" to skip.
+    exit /b 1
+)
+exit /b 0

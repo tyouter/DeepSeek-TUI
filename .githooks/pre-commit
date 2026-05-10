@@ -1,0 +1,10 @@
+@echo off
+REM pre-commit hook — run quick gates before every commit
+REM Installed via: git config core.hooksPath .githooks
+python scripts/check.py quick
+if errorlevel 1 (
+    echo.
+    echo   Commit blocked. Fix errors or use "git commit --no-verify" to skip.
+    exit /b 1
+)
+exit /b 0

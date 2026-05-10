@@ -587,7 +587,7 @@ pub fn create_saved_session_with_mode(
         .find(|m| m.role == "user")
         .and_then(|m| {
             m.content.iter().find_map(|block| match block {
-                ContentBlock::Text { text, .. } => Some(truncate_title(text, 50)),
+                ContentBlock::Text { text, .. } => Some(truncate_title(extract_user_prompt(text), 50)),
                 _ => None,
             })
         })
@@ -788,6 +788,25 @@ fn system_prompt_to_string(system_prompt: Option<&SystemPrompt>) -> Option<Strin
 /// Returns a `&str` borrowing from the input — no allocation.
 pub fn truncate_id(id: &str) -> &str {
     id.get(..8).unwrap_or(id)
+
+/// Strip `<turn_meta>...</turn_meta>` prefix from a message text to
+/// extract the user's actual prompt. Returns trimmed text unchanged if
+/// no turn-meta block is present.
+pub(crate) fn extract_user_prompt(raw: &str) -> &str {
+    let trimmed = raw.trim_start();
+    if let Some(rest) = trimmed
+        .strip_prefix("<turn_meta>")
+        .and_then(|after_open| {
+            after_open
+                .find("</turn_meta>")
+                .map(|close_pos| &after_open[close_pos + "</turn_meta>".len()..])
+        })
+    {
+        rest.trim_start()
+    } else {
+        trimmed
+    }
+}
 }
 
 /// Truncate a string to create a title (character-safe for UTF-8)

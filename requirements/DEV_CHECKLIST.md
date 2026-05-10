@@ -91,3 +91,4 @@
 8. ❌ M/L 需求不写 WBS 直接开始开发
 9. ❌ Phase 2 完成不生成证据包
 10. ❌ 上下文 > 80% 继续开发不 compact
+11. ❌ 将本地 pipeline 文件（requirements/、scripts/、.githooks/）包含在 PR 中

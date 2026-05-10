@@ -122,17 +122,26 @@ AI 出具**评审报告**，必须覆盖：
 
 ### 2.1 分支创建
 
-```bash
-# 1. 确保在最新上游基础上
-git checkout ray-song-feature
-git fetch upstream
-git rebase upstream/main
+**关键：feature 分支必须从 `upstream/main` 创建，不经过 `ray-song-feature`。**
+`ray-song-feature` 包含本地 pipeline 文件（`requirements/`、`scripts/`、`.githooks/`），
+这些文件**绝不**进入 PR。从 upstream/main 直接切分支保证 PR 干净。
 
-# 2. 创建 feature 分支
-git checkout -b feat/<REQ-ID>-<short-slug>
+```bash
+# 1. 确保上游最新
+git fetch upstream
+
+# 2. 直接从 upstream/main 创建 feature 分支（干净基线）
+git checkout -b feat/<REQ-ID>-<short-slug> upstream/main
 
 # 示例
-git checkout -b feat/REQ-20260510-001-check-gates
+git checkout -b feat/REQ-20260510-001-fix-scroll upstream/main
+```
+
+分支关系：
+```
+upstream/main  ←── feat/<REQ-ID>-<slug> (PR 分支，只含此需求的改动)
+     │
+     └── ray-song-feature (本地开发分支，含 pipeline 文件，永不 PR)
 ```
 
 ### 2.2 规格文档（M/L 级别需求）
@@ -266,7 +275,7 @@ AI 必须逐条回答以下问题，不得跳过：
 - **简短描述** (#PR编号，待填) — 详细说明。Thanks **@tyouter**.
 ```
 
-### 2.6 Commit & 合并
+### 2.6 Commit & 后续
 
 ```bash
 # Atomic commits with conventional format
@@ -278,9 +287,9 @@ git commit -m "feat(<scope>): 简短描述
 Refs: REQ-YYYYMMDD-NNN
 Developed with AI assistance."
 
-# 合并回开发主分支
-git checkout ray-song-feature
-git merge feat/<REQ-ID>-<slug> --no-ff
+# 注意：不要合并回 ray-song-feature！
+# feature 分支直接从 upstream/main 创建，保持干净。
+# PR 合入上游后，ray-song-feature 可以通过 rebase upstream/main 获取最新代码。
 ```
 
 ### Exit Criteria (Phase 2)
@@ -291,7 +300,7 @@ git merge feat/<REQ-ID>-<slug> --no-ff
 - [ ] Layer 3 架构安全审查完成
 - [ ] Layer 4 用户审查完成（已批准）
 - [ ] Changelog 片段已写
-- [ ] 分支已合并到 `ray-song-feature`
+- [ ] 代码在 feature 分支上，基于 upstream/main
 
 ---
 
@@ -323,7 +332,8 @@ PR body 使用 `.github/PULL_REQUEST_TEMPLATE.md` 模板。
 ### 3.3 最后一次 Rebase
 
 ```bash
-git checkout ray-song-feature
+# feature 分支已基于 upstream/main，只需确保它是最新的
+git checkout feat/<REQ-ID>-<slug>
 git fetch upstream
 git rebase upstream/main
 ```
@@ -376,7 +386,7 @@ gh pr create \
 ### 3.8 回滚流程（PR 失败时）
 
 ```
-git checkout ray-song-feature
+git checkout feat/<REQ-ID>-<slug>
 git reset --hard pre-pr/<REQ-ID>-v1    # 回到 checkpoint
 # 分析问题，修改代码，解决后：
 git tag pre-pr/<REQ-ID>-v2             # 新 checkpoint
@@ -882,3 +892,4 @@ scope 可选: tui, core, cli, mcp, config, tools, agent
 5. ❌ **在 Phase 2 跳过多层安全审查** — Layer 1-4 每一项都必须有记录
 6. ❌ **在未打 checkpoint tag 前 rebase** — 丢工作无法恢复
 7. ❌ **PR 描述不写 Testing 部分** — 上游维护者会直接要求补充
+8. ❌ **将 `requirements/`、`scripts/`、`.githooks/` 等本地 pipeline 文件包含在 PR 中** — 它们是开发工具，不是项目代码

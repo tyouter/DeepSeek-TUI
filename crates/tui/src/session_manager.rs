@@ -788,6 +788,7 @@ fn system_prompt_to_string(system_prompt: Option<&SystemPrompt>) -> Option<Strin
 /// Returns a `&str` borrowing from the input — no allocation.
 pub fn truncate_id(id: &str) -> &str {
     id.get(..8).unwrap_or(id)
+}
 
 /// Strip `<turn_meta>...</turn_meta>` prefix from a message text to
 /// extract the user's actual prompt. Returns trimmed text unchanged if
@@ -806,7 +807,6 @@ pub(crate) fn extract_user_prompt(raw: &str) -> &str {
     } else {
         trimmed
     }
-}
 }
 
 /// Truncate a string to create a title (character-safe for UTF-8)

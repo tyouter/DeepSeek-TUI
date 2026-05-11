@@ -587,7 +587,9 @@ pub fn create_saved_session_with_mode(
         .find(|m| m.role == "user")
         .and_then(|m| {
             m.content.iter().find_map(|block| match block {
-                ContentBlock::Text { text, .. } => Some(truncate_title(extract_user_prompt(text), 50)),
+                ContentBlock::Text { text, .. } => {
+                    Some(truncate_title(extract_user_prompt(text), 50))
+                }
                 _ => None,
             })
         })
@@ -795,18 +797,15 @@ pub fn truncate_id(id: &str) -> &str {
 /// no turn-meta block is present.
 pub(crate) fn extract_user_prompt(raw: &str) -> &str {
     let trimmed = raw.trim_start();
-    if let Some(rest) = trimmed
-        .strip_prefix("<turn_meta>")
-        .and_then(|after_open| {
-            after_open
-                .find("</turn_meta>")
-                .map(|close_pos| &after_open[close_pos + "</turn_meta>".len()..])
-        })
-    {
-        rest.trim_start()
-    } else {
-        trimmed
+    let Some(after_open) = trimmed.strip_prefix("<turn_meta>") else {
+        return trimmed;
+    };
+    // Try to find closing tag
+    if let Some(close_pos) = after_open.find("</turn_meta>") {
+        return after_open[close_pos + "</turn_meta>".len()..].trim_start();
     }
+    // Closing tag not found (e.g. title was truncated mid-metadata).
+    after_open.trim_start()
 }
 
 /// Strip common thinking/reasoning XML tags from assistant text so
@@ -819,15 +818,18 @@ pub(crate) fn strip_thinking_tags(text: &str) -> String {
         let open = format!("<{tag}>");
         let close = format!("</{tag}>");
         loop {
-            let Some(start) = result.find(&open) else { break };
-            let Some(end) = result[start..].find(&close) else { break };
+            let Some(start) = result.find(&open) else {
+                break;
+            };
+            let Some(end) = result[start..].find(&close) else {
+                break;
+            };
             let end_abs = start + end + close.len();
             result.replace_range(start..end_abs, "");
         }
     }
     result
 }
-
 
 /// Truncate a string to create a title (character-safe for UTF-8)
 fn truncate_title(s: &str, max_len: usize) -> String {

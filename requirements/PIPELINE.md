@@ -1,8 +1,9 @@
-# Development Pipeline v1.3
+# Development Pipeline v1.4
 
-> 版本: 1.3 | 最后更新: 2026-05-11 | 维护: AI Agent + tyouter
+> 版本: 1.4 | 最后更新: 2026-05-11 | 维护: AI Agent + tyouter
 >
-> 本文档定义了从需求发现到 PR 合入上游的**强制性**开发流程。
+> 本文档定义了从需求发现到 PR 合入上游的开发流程。
+> 按需加载（触发词: "开始开发", "评审需求", "提交 PR"）。
 > 任何偏离必须有明确理由并记录在 RETRO.md 中。
 
 ---
@@ -19,7 +20,7 @@
 ## 流程总览
 
 ```
-Phase 0: 会话启动（每次对话开始，AI 强制执行）
+Phase 0: 会话启动（按需，触发词"开始开发"）
    │
    ▼
 Phase 1: 需求评审（每个新需求走此流程）
@@ -38,14 +39,12 @@ Phase M: Pipeline 改进（持续的元工作）
 
 ## Phase 0: 会话启动协议
 
-**触发**: 每次 AI 对话开始时
+**触发**: 用户说"开始开发" / "评审需求" / "提交 PR"（按需加载）
 **执行者**: AI Agent
 **依据**: `requirements/SESSION_STARTUP.md`
 
 ### Exit Criteria
 
-- [ ] `requirements/DEV_CHECKLIST.md` 已加载并确认
-- [ ] `requirements/PIPELINE.md` 已加载（本文件）
 - [ ] `git fetch upstream --prune --quiet` 完成
 - [ ] `ray-song-feature` 相对 `upstream/main` 的落后情况已确认
 - [ ] 上游新增 issue/PR 已扫描（与 POOL 去重）

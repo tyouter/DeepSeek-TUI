@@ -1,5 +1,15 @@
 # Project Instructions
 
+> **DEVELOPMENT PIPELINE**: This workspace uses a structured pipeline for contributing
+> to upstream DeepSeek-TUI. The AI agent MUST load these documents at session start:
+> 1. `requirements/DEV_CHECKLIST.md` — coding constraints + security checklist
+> 2. `requirements/PIPELINE.md` — full pipeline specification (Phase 0–M)
+> 3. `requirements/SESSION_STARTUP.md` — session startup protocol (Phase 0)
+>
+> Then execute Phase 0: `git fetch upstream`, check branch status, scan new upstream
+> issues/PRs, and output a status summary. All code changes follow the Coding Protocol
+> (C.1–C.5) and pass the 4-layer security review before PR.
+
 This file provides context for AI assistants working on this project.
 
 ## Project Type: Rust

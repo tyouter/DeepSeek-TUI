@@ -1,10 +1,5 @@
 # Project Instructions
 
-> **DEVELOPMENT PIPELINE (on-demand)**: `requirements/` contains a structured
-> pipeline for contributing to upstream. It is loaded **only when needed** —
-> triggered by phrases like "开始开发", "评审需求", "提交 PR", or explicit
-> pipeline requests. Normal conversation does not activate it.
-
 This file provides context for AI assistants working on this project.
 
 ## Project Type: Rust

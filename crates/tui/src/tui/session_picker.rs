@@ -661,6 +661,38 @@ mod tests {
 
     #[test]
     fn ensure_selected_visible_updates_scroll_window() {
+        let sessions = (0..10)
+            .map(|idx| test_session(idx, &format!("Session {idx}")))
+            .collect::<Vec<_>>();
+
+        let mut view = SessionPickerView {
+            sessions: sessions.clone(),
+            filtered: sessions,
+            selected: 0,
+            list_scroll: Cell::new(0),
+            list_visible_rows: Cell::new(3),
+            search_input: String::new(),
+            search_mode: false,
+            sort_mode: SortMode::Recent,
+            preview_cache: HashMap::new(),
+            current_preview: Vec::new(),
+            confirm_delete: false,
+            status: None,
+        };
+
+        view.selected = 6;
+        view.ensure_selected_visible();
+        assert_eq!(view.list_scroll.get(), 4);
+
+        view.selected = 1;
+        view.ensure_selected_visible();
+        assert_eq!(view.list_scroll.get(), 1);
+
+        view.selected = 9;
+        view.ensure_selected_visible();
+        assert_eq!(view.list_scroll.get(), 7);
+    }
+
     // ─── build_preview_lines tests ───
 
     fn make_saved_session(messages: Vec<crate::models::Message>) -> crate::session_manager::SavedSession {
@@ -747,7 +779,7 @@ mod tests {
         ]);
         let lines = build_preview_lines(&session);
         // No empty USER line
-        assert!(!lines.iter().any(|l| l == "USER: " || l.starts_with("USER: ") && l.len() <= 7));
+        assert!(!lines.iter().any(|l| l == "USER: " || (l.starts_with("USER: ") && l.len() <= 7)));
     }
 
     #[test]
@@ -766,38 +798,5 @@ mod tests {
         // No "ASSISTANT:" line for the thinking-only message
         let assistant_count = lines.iter().filter(|l| l.starts_with("ASSISTANT:")).count();
         assert_eq!(assistant_count, 1, "thinking-only assistant should be skipped");
-    }
-
-
-        let sessions = (0..10)
-            .map(|idx| test_session(idx, &format!("Session {idx}")))
-            .collect::<Vec<_>>();
-
-        let mut view = SessionPickerView {
-            sessions: sessions.clone(),
-            filtered: sessions,
-            selected: 0,
-            list_scroll: Cell::new(0),
-            list_visible_rows: Cell::new(3),
-            search_input: String::new(),
-            search_mode: false,
-            sort_mode: SortMode::Recent,
-            preview_cache: HashMap::new(),
-            current_preview: Vec::new(),
-            confirm_delete: false,
-            status: None,
-        };
-
-        view.selected = 6;
-        view.ensure_selected_visible();
-        assert_eq!(view.list_scroll.get(), 4);
-
-        view.selected = 1;
-        view.ensure_selected_visible();
-        assert_eq!(view.list_scroll.get(), 1);
-
-        view.selected = 9;
-        view.ensure_selected_visible();
-        assert_eq!(view.list_scroll.get(), 7);
     }
 }

@@ -1125,6 +1125,16 @@ mod tests {
 
     #[test]
     fn test_format_age() {
+        let now = Utc::now();
+        assert_eq!(format_age(&now), "just now");
+
+        let hour_ago = now - chrono::Duration::hours(2);
+        assert_eq!(format_age(&hour_ago), "2h ago");
+
+        let day_ago = now - chrono::Duration::days(3);
+        assert_eq!(format_age(&day_ago), "3d ago");
+    }
+
     // ─── extract_user_prompt tests ───
 
     #[test]
@@ -1167,17 +1177,6 @@ mod tests {
     #[test]
     fn extract_user_prompt_handles_whitespace_only() {
         assert_eq!(extract_user_prompt("   \n  "), "");
-    }
-
-
-        let now = Utc::now();
-        assert_eq!(format_age(&now), "just now");
-
-        let hour_ago = now - chrono::Duration::hours(2);
-        assert_eq!(format_age(&hour_ago), "2h ago");
-
-        let day_ago = now - chrono::Duration::days(3);
-        assert_eq!(format_age(&day_ago), "3d ago");
     }
 
     #[test]

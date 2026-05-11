@@ -809,6 +809,26 @@ pub(crate) fn extract_user_prompt(raw: &str) -> &str {
     }
 }
 
+/// Strip common thinking/reasoning XML tags from assistant text so
+/// the preview only shows the final answer, not the internal monologue.
+pub(crate) fn strip_thinking_tags(text: &str) -> String {
+    // Remove <think>...</think>, <thinking>...</thinking>, <reasoning>...</reasoning>
+    let tags = ["think", "thinking", "reasoning"];
+    let mut result = text.to_string();
+    for tag in &tags {
+        let open = format!("<{tag}>");
+        let close = format!("</{tag}>");
+        loop {
+            let Some(start) = result.find(&open) else { break };
+            let Some(end) = result[start..].find(&close) else { break };
+            let end_abs = start + end + close.len();
+            result.replace_range(start..end_abs, "");
+        }
+    }
+    result
+}
+
+
 /// Truncate a string to create a title (character-safe for UTF-8)
 fn truncate_title(s: &str, max_len: usize) -> String {
     let s = s.trim();

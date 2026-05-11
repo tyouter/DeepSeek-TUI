@@ -467,7 +467,7 @@ fn build_list_lines(
 
 fn format_session_line(session: &SessionMetadata) -> String {
     let updated = format_relative_time(&session.updated_at);
-    let title = truncate(&session.title, 32);
+    let title = truncate(crate::session_manager::extract_user_prompt(&session.title), 32);
     let mode = session
         .mode
         .as_deref()
@@ -514,11 +514,12 @@ fn build_preview_lines(session: &SavedSession) -> Vec<String> {
         for block in &message.content {
             match block {
                 crate::models::ContentBlock::Text { text: body, .. } => {
-                    // Strip system-invisible prefixes from all user messages
+                    // Strip system-invisible prefixes from user messages;
+                    // strip thinking XML tags from assistant messages
                     let cleaned = if role == "USER" {
                         crate::session_manager::extract_user_prompt(body).to_string()
                     } else {
-                        body.clone()
+                        crate::session_manager::strip_thinking_tags(body)
                     };
                     if !cleaned.trim().is_empty() {
                         if !text.is_empty() {

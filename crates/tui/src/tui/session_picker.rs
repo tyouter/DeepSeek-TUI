@@ -661,6 +661,114 @@ mod tests {
 
     #[test]
     fn ensure_selected_visible_updates_scroll_window() {
+    // ─── build_preview_lines tests ───
+
+    fn make_saved_session(messages: Vec<crate::models::Message>) -> crate::session_manager::SavedSession {
+        use chrono::Utc;
+        crate::session_manager::SavedSession {
+            schema_version: 1,
+            metadata: crate::session_manager::SessionMetadata {
+                id: "test-session".to_string(),
+                title: "Test Session".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                message_count: messages.len(),
+                total_tokens: 100,
+                model: "deepseek-v4-pro".to_string(),
+                workspace: std::path::PathBuf::from("/tmp"),
+                mode: Some("agent".to_string()),
+            },
+            messages,
+            system_prompt: None,
+            context_references: Vec::new(),
+        }
+    }
+
+    fn msg(role: &str, text: &str) -> crate::models::Message {
+        crate::models::Message {
+            role: role.to_string(),
+            content: vec![crate::models::ContentBlock::Text {
+                text: text.to_string(),
+                cache_control: None,
+            }],
+        }
+    }
+
+    fn msg_with_thinking(role: &str, thinking: &str, text: &str) -> crate::models::Message {
+        use crate::models::ContentBlock;
+        let mut blocks = Vec::new();
+        if !thinking.is_empty() {
+            blocks.push(ContentBlock::Thinking { thinking: thinking.to_string() });
+        }
+        if !text.is_empty() {
+            blocks.push(ContentBlock::Text { text: text.to_string(), cache_control: None });
+        }
+        crate::models::Message { role: role.to_string(), content: blocks }
+    }
+
+    #[test]
+    fn build_preview_shows_user_and_assistant_messages() {
+        let session = make_saved_session(vec![
+            msg("user", "Hello"),
+            msg("assistant", "Hi there!"),
+        ]);
+        let lines = build_preview_lines(&session);
+        assert!(lines.iter().any(|l| l.contains("USER: Hello")));
+        assert!(lines.iter().any(|l| l.contains("ASSISTANT: Hi there!")));
+    }
+
+    #[test]
+    fn build_preview_strips_turn_meta_from_user_messages() {
+        let session = make_saved_session(vec![
+            msg("user", "<turn_meta>abc</turn_meta>Fix the bug please"),
+            msg("assistant", "I'll help with that."),
+        ]);
+        let lines = build_preview_lines(&session);
+        assert!(!lines.iter().any(|l| l.contains("turn_meta")), "turn_meta leaked into preview");
+        assert!(lines.iter().any(|l| l.contains("USER: Fix the bug please")));
+    }
+
+    #[test]
+    fn build_preview_skips_thinking_blocks() {
+        let session = make_saved_session(vec![
+            msg("user", "What is 2+2?"),
+            msg_with_thinking("assistant", "Let me think about this...", "2+2 equals 4."),
+        ]);
+        let lines = build_preview_lines(&session);
+        assert!(!lines.iter().any(|l| l.contains("thinking") || l.contains("Let me think")));
+        assert!(lines.iter().any(|l| l.contains("ASSISTANT: 2+2 equals 4")));
+    }
+
+    #[test]
+    fn build_preview_skips_empty_messages() {
+        let session = make_saved_session(vec![
+            msg("user", ""),
+            msg("assistant", "Response"),
+        ]);
+        let lines = build_preview_lines(&session);
+        // No empty USER line
+        assert!(!lines.iter().any(|l| l == "USER: " || l.starts_with("USER: ") && l.len() <= 7));
+    }
+
+    #[test]
+    fn build_preview_handles_thinking_only_message() {
+        let session = make_saved_session(vec![
+            msg("user", "prompt"),
+            msg_with_thinking("assistant", "thinking...", ""),
+            msg("user", "follow up"),
+            msg("assistant", "answer"),
+        ]);
+        let lines = build_preview_lines(&session);
+        // The thinking-only assistant message should be skipped
+        assert!(lines.iter().any(|l| l.contains("USER: prompt")));
+        assert!(lines.iter().any(|l| l.contains("USER: follow up")));
+        assert!(lines.iter().any(|l| l.contains("ASSISTANT: answer")));
+        // No "ASSISTANT:" line for the thinking-only message
+        let assistant_count = lines.iter().filter(|l| l.starts_with("ASSISTANT:")).count();
+        assert_eq!(assistant_count, 1, "thinking-only assistant should be skipped");
+    }
+
+
         let sessions = (0..10)
             .map(|idx| test_session(idx, &format!("Session {idx}")))
             .collect::<Vec<_>>();

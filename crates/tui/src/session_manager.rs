@@ -1125,6 +1125,51 @@ mod tests {
 
     #[test]
     fn test_format_age() {
+    // ─── extract_user_prompt tests ───
+
+    #[test]
+    fn extract_user_prompt_removes_turn_meta_prefix() {
+        assert_eq!(
+            extract_user_prompt("<turn_meta>some metadata</turn_meta>What is Rust?"),
+            "What is Rust?"
+        );
+    }
+
+    #[test]
+    fn extract_user_prompt_preserves_text_without_turn_meta() {
+        assert_eq!(extract_user_prompt("Hello, world!"), "Hello, world!");
+    }
+
+    #[test]
+    fn extract_user_prompt_handles_leading_whitespace() {
+        assert_eq!(
+            extract_user_prompt("  \n  <turn_meta>x</turn_meta>actual prompt"),
+            "actual prompt"
+        );
+    }
+
+    #[test]
+    fn extract_user_prompt_returns_empty_when_only_turn_meta() {
+        assert_eq!(extract_user_prompt("<turn_meta>x</turn_meta>"), "");
+    }
+
+    #[test]
+    fn extract_user_prompt_does_not_strip_mid_text_turn_meta() {
+        let input = "some text <turn_meta>not a prefix</turn_meta> more text";
+        assert_eq!(extract_user_prompt(input), input);
+    }
+
+    #[test]
+    fn extract_user_prompt_handles_empty_string() {
+        assert_eq!(extract_user_prompt(""), "");
+    }
+
+    #[test]
+    fn extract_user_prompt_handles_whitespace_only() {
+        assert_eq!(extract_user_prompt("   \n  "), "");
+    }
+
+
         let now = Utc::now();
         assert_eq!(format_age(&now), "just now");
 

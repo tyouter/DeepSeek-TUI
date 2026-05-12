@@ -15,7 +15,7 @@ use ratatui::{
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::palette;
-use crate::session_manager::{SavedSession, SessionManager, SessionMetadata};
+use crate::session_manager::{extract_title, SavedSession, SessionManager, SessionMetadata};
 use crate::tui::views::{ModalKind, ModalView, ViewAction, ViewEvent};
 
 fn modal_block(title: &str) -> Block<'static> {
@@ -467,10 +467,12 @@ fn build_list_lines(
 
 fn format_session_line(session: &SessionMetadata) -> String {
     let updated = format_relative_time(&session.updated_at);
-    let title = truncate(
-        crate::session_manager::extract_user_prompt(&session.title),
-        32,
-    );
+    let raw_title = extract_title(&session.title);
+    let title = if raw_title == "Session" {
+        truncate(crate::session_manager::truncate_id(&session.id), 32)
+    } else {
+        truncate(raw_title, 32)
+    };
     let mode = session
         .mode
         .as_deref()
@@ -490,7 +492,7 @@ fn build_preview_lines(session: &SavedSession) -> Vec<String> {
     let mut out = Vec::new();
     out.push(format!(
         "Title: {}",
-        crate::session_manager::extract_user_prompt(&session.metadata.title)
+        extract_title(&session.metadata.title)
     ));
     out.push(format!(
         "Updated: {}",

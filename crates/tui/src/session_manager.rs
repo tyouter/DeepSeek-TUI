@@ -581,14 +581,19 @@ pub fn create_saved_session_with_mode(
     let id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    // Generate title from first user message
+    // Generate title from first user message that has Text content
     let title = messages
         .iter()
-        .find(|m| m.role == "user")
-        .and_then(|m| {
+        .filter(|m| m.role == "user")
+        .find_map(|m| {
             m.content.iter().find_map(|block| match block {
                 ContentBlock::Text { text, .. } => {
-                    Some(truncate_title(extract_user_prompt(text), 50))
+                    let t = extract_user_prompt(text);
+                    if !t.is_empty() {
+                        Some(truncate_title(t, 50))
+                    } else {
+                        None
+                    }
                 }
                 _ => None,
             })
@@ -800,13 +805,20 @@ pub(crate) fn extract_user_prompt(raw: &str) -> &str {
     let Some(after_open) = trimmed.strip_prefix("<turn_meta>") else {
         return trimmed;
     };
-    // Try to find closing tag
     if let Some(close_pos) = after_open.find("</turn_meta>") {
         return after_open[close_pos + "</turn_meta>".len()..].trim_start();
     }
-    // Closing tag not found (e.g. title was truncated mid-metadata).
     after_open.trim_start()
 }
+
+/// Like extract_user_prompt but returns "Session" as a fallback for empty results.
+/// Use for title display only, NOT for message body extraction.
+pub(crate) fn extract_title(raw: &str) -> &str {
+    let result = extract_user_prompt(raw);
+    if result.is_empty() { "Session" } else { result }
+}
+
+
 
 /// Strip common thinking/reasoning XML tags from assistant text so
 /// the preview only shows the final answer, not the internal monologue.
@@ -1181,8 +1193,8 @@ mod tests {
     }
 
     #[test]
-    fn extract_user_prompt_returns_empty_when_only_turn_meta() {
-        assert_eq!(extract_user_prompt("<turn_meta>x</turn_meta>"), "");
+    fn extract_title_returns_fallback_when_empty() {
+        assert_eq!(extract_title("<turn_meta>x</turn_meta>"), "Session");
     }
 
     #[test]

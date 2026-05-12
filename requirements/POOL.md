@@ -102,6 +102,16 @@
 
 ---
 
+## PR 追踪
+
+| PR | REQ | 状态 | Review | 更新 |
+|----|-----|------|--------|------|
+| [#1510](https://github.com/Hmbown/DeepSeek-TUI/pull/1510) | REQ-20260511-001 | 🟢 Open | — | 2026-05-12 |
+
+> 运行 `python scripts/pr-status.py` 获取最新状态，或说 "PR status" 触发 AI 检查。
+
+---
+
 ## 变更记录
 
 | 日期 | 变更 | 说明 |

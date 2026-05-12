@@ -55,6 +55,11 @@
 - [ ] PR 描述包含 Testing 证据
 - [ ] 不将 `requirements/`、`scripts/`、`.githooks/` 带进 PR
 
+## 定期维护
+
+- [ ] 用户说 "PR status" → 运行 `python scripts/pr-status.py` 并更新 POOL.md 中的 PR 追踪表
+- [ ] 每天首次开发会话前检查 PR 状态
+
 ## 严禁事项
 
 1. ❌ 跳过 upstream issue/PR 去重
